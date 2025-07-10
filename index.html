@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>MazdaCScanner</title>
+
+    <meta name="theme-color" content="#410505" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+        /* Estilos para la pantalla de carga (Splash Screen) */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1c1c1c; /* Fondo oscuro, similar al del body */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Asegura que esté por encima de todo */
+            transition: opacity 1s ease-out, transform 1s ease-out; /* Transición para desvanecer y mover */
+            flex-direction: column; /* Para centrar verticalmente el logo */
+        }
+
+        #splash-screen.hidden {
+            opacity: 0;
+            transform: translateY(-100%); /* Mueve la pantalla completamente hacia arriba */
+            pointer-events: none; /* Permite hacer clic a través una vez oculta */
+        }
+
+        #splash-screen img {
+            max-width: 60%; /* Más pequeño para móviles, se ajustará con media queries */
+            height: auto;
+            animation: fadeInScale 1s ease-out;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Estilos generales del diseño */
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: #1c1c1c;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden; /* Evita el scroll horizontal */
+            overflow-y: auto; /* Permite scroll vertical si es necesario */
+        }
+
+        /* Encabezado fijo */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: #410505;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            z-index: 999;
+            gap: 10px;
+            box-sizing: border-box; /* Importante para padding y width */
+        }
+        header img {
+            height: 50px; /* Ajuste para un tamaño más adaptable */
+        }
+        header h1 {
+            font-size: 20px;
+            margin: 0;
+            text-align: center; /* Asegura que el texto esté centrado si hay wrap */
+            line-height: 1.2; /* Mejora la legibilidad */
+        }
+
+        /* Contenido principal */
+        main {
+            margin-top: 90px; /* Espacio por el header + un poco más */
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px; /* Aumentado el espacio entre elementos */
+            padding: 10px;
+            box-sizing: border-box;
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+            visibility: hidden;
+            flex-grow: 1; /* Permite que main ocupe el espacio disponible */
+            padding-bottom: 20px; /* Espacio extra al final */
+        }
+        main.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        video, canvas {
+            width: 100%;
+            max-height: 70vh; /* Ajustado para que quepa más contenido en pantalla */
+            border: 4px solid #410505;
+            border-radius: 12px;
+            background-color: #1b1a1a;
+            box-shadow: 0 4px 10px rgba(87, 0, 0, 0.877);
+            object-fit: contain;
+            display: block; /* Asegura que no haya espacio extra debajo */
+        }
+        canvas {
+            display: none;
+        }
+
+        /* Botones y controles */
+        .botones {
+            display: flex;
+            flex-wrap: wrap; /* Permite que los botones se envuelvan a la siguiente línea */
+            justify-content: center;
+            gap: 10px; /* Reducido el espacio para mejor ajuste */
+            margin-top: 15px;
+            width: 100%;
+        }
+        label {
+            color: #cecece;
+            font-weight: bold;
+            user-select: none;
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+            width: 100%; /* Para que la etiqueta ocupe su propia línea */
+        }
+        input[type="checkbox"] {
+            transform: scale(1.3);
+            cursor: pointer;
+            accent-color: #868686;
+            filter: drop-shadow(0 0 1px #4b0000);
+        }
+        button {
+            background-color: #410505;
+            color: #fff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            flex: 1 1 auto; /* Permite que los botones crezcan/reduzcan y se envuelvan */
+            min-width: 120px; /* Ancho mínimo para que los botones no se hagan muy pequeños */
+            max-width: 180px; /* Ancho máximo para que no sean demasiado grandes en desktop */
+        }
+        button:hover {
+            background-color: #5a0808;
+            transform: translateY(-2px);
+        }
+        button:active {
+            background-color: #2b0303;
+            transform: translateY(0);
+        }
+
+        /* Estilos del Footer */
+        footer {
+            background-color: #282828; /* Un gris oscuro para el footer */
+            color: #ccc; /* Un color de texto claro pero no blanco puro */
+            text-align: center;
+            padding: 15px 10px;
+            width: 100%;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.3); /* Sombra superior */
+            margin-top: auto; /* Empuja el footer hacia abajo */
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        footer p {
+            margin: 5px 0;
+            line-height: 1.4;
+        }
+        footer strong {
+            color: #eee; /* Hace el nombre un poco más brillante */
+        }
+
+        /* Media Queries para ajuste fino */
+
+        /* Teléfonos pequeños y tabletas en vertical */
+        @media (max-width: 480px) {
+            #splash-screen img {
+                max-width: 70%; /* Un poco más grande en pantallas muy pequeñas */
+            }
+            header img {
+                height: 40px;
+            }
+            header h1 {
+                font-size: 16px;
+            }
+            main {
+                margin-top: 70px; /* Menos margen en pantallas pequeñas */
+                padding: 8px;
+            }
+            video, canvas {
+                max-height: 60vh; /* Para que el contenido quepa en la vista */
+            }
+            label {
+                font-size: 16px;
+            }
+            button {
+                font-size: 14px;
+                padding: 10px 15px;
+                min-width: unset; /* Quita el mínimo para que se ajusten mejor */
+                width: 100%; /* Cada botón ocupa una línea */
+                max-width: none;
+            }
+            .botones {
+                gap: 8px; /* Espacio reducido entre botones */
+            }
+            footer {
+                font-size: 12px;
+                padding: 10px 8px;
+            }
+        }
+
+        /* Tabletas y pantallas medianas (de 481px a 800px) */
+        @media (min-width: 481px) and (max-width: 800px) {
+            #splash-screen img {
+                max-width: 50%;
+            }
+            header img {
+                height: 48px;
+            }
+            header h1 {
+                font-size: 18px;
+            }
+            main {
+                margin-top: 80px;
+                padding: 15px;
+            }
+            video, canvas {
+                max-height: 75vh;
+            }
+            button {
+                flex: 1 1 45%; /* Dos botones por fila */
+            }
+            footer {
+                font-size: 13px;
+            }
+        }
+
+        /* Escritorio y pantallas grandes (a partir de 801px) */
+        @media (min-width: 801px) {
+            #splash-screen img {
+                max-width: 30%;
+            }
+            header img {
+                height: 64px;
+            }
+            header h1 {
+                font-size: 24px;
+            }
+            main {
+                margin-top: 100px; /* Un poco más de espacio en pantallas grandes */
+                padding: 20px;
+                gap: 20px;
+            }
+            video, canvas {
+                max-height: 75vh;
+                width: 70%; /* Ancho ligeramente más controlado en desktop */
+            }
+            label {
+                font-size: 20px;
+            }
+            button {
+                font-size: 18px;
+                padding: 15px 25px;
+                max-width: 200px; /* Ancho máximo para botones en desktop */
+            }
+            footer {
+                font-size: 15px;
+            }
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <img src="mazda_logo.png" alt="Logo Mazda" />
+    </div>
+
+    <header>
+        <img src="mazda_logo.png" alt="Logo Mazda" />
+        <h1>MazdaCScanner</h1>
+    </header>
+
+    <main>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+
+        <label>
+            <input type="checkbox" id="filtroCheckbox" checked />
+            Aplicar filtro
+        </label>
+        <label>
+            <input type="checkbox" id="flashCheckbox" />
+            Activar Flash
+        </label>
+
+        <div class="botones">
+            <button onclick="capturar()">Escanear</button>
+            <button onclick="descargarPDF()">Descargar PDF</button>
+            <button onclick="descargarImagen()">Descargar Imagen</button>
+            <button onclick="recargar()">Refrescar</button>
+        </div>
+    </main>
+
+    <footer>
+        <p>Creado por: <strong>Mirley Madaí Gómez Acosta</strong></p>
+        <p>Para: Mazda, Tabasco Motors S.A. de C.V - Estadías, UTCAM 2025.</p>
+    </footer>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const filtroCheckbox = document.getElementById('filtroCheckbox');
+        const flashCheckbox = document.getElementById('flashCheckbox'); // Nuevo checkbox para el flash
+        let documentoEscaneado = false;
+        let stream = null;
+        let videoTrack = null; // Para almacenar la pista de video y controlar el flash
+        let mazdaLogo = new Image();
+        mazdaLogo.src = 'mazda_logo.png';
+
+        const splashScreen = document.getElementById('splash-screen');
+        const mainContent = document.querySelector('main');
+        const bodyElement = document.body;
+
+        const LETTER_WIDTH_PX = 2550;
+        const LETTER_HEIGHT_PX = 3300;
+
+        async function iniciarCamara() {
+            try {
+                // Configuración de la cámara, incluyendo la opción de flash (torch)
+                const constraints = {
+                    video: {
+                        facingMode: "environment",
+                        width: { ideal: LETTER_WIDTH_PX, min: 1280 },
+                        height: { ideal: LETTER_HEIGHT_PX, min: 720 },
+                        aspectRatio: { ideal: LETTER_WIDTH_PX / LETTER_HEIGHT_PX }
+                        // No ponemos torch aquí directamente, lo controlaremos después
+                    }
+                };
+
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                videoTrack = stream.getVideoTracks()[0]; // Obtenemos la pista de video
+
+                // Monitorear cambios en el checkbox del flash
+                flashCheckbox.addEventListener('change', toggleFlash);
+
+                // Si el flash checkbox está marcado al inicio, intentar activar el flash
+                if (flashCheckbox.checked) {
+                    toggleFlash();
+                }
+
+                video.style.display = "block";
+                canvas.style.display = "none";
+                documentoEscaneado = false;
+            } catch (error) {
+                console.error("Error al acceder a la cámara o configurar la resolución: ", error);
+                alert("No se pudo acceder a la cámara o configurar la resolución: " + error.name + ". Intentando configuración predeterminada.");
+                try {
+                    // Intento de fallback sin resolución específica
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    video.srcObject = stream;
+                    videoTrack = stream.getVideoTracks()[0];
+                    flashCheckbox.addEventListener('change', toggleFlash); // También aquí
+                    if (flashCheckbox.checked) {
+                        toggleFlash();
+                    }
+                    video.style.display = "block";
+                    canvas.style.display = "none";
+                    documentoEscaneado = false;
+                } catch (fallbackError) {
+                    console.error("Error final al acceder a la cámara: ", fallbackError);
+                    alert("Error final al acceder a la cámara: " + fallbackError.name);
+                    flashCheckbox.disabled = true; // Deshabilita el checkbox si no se puede acceder a la cámara
+                }
+            }
+        }
+
+        async function toggleFlash() {
+            if (videoTrack) {
+                const capabilities = videoTrack.getCapabilities();
+                // Verificar si la cámara soporta la propiedad 'torch'
+                if (capabilities.torch) {
+                    try {
+                        await videoTrack.applyConstraints({
+                            advanced: [{ torch: flashCheckbox.checked }]
+                        });
+                        console.log("Flash " + (flashCheckbox.checked ? "activado" : "desactivado"));
+                    } catch (err) {
+                        console.error("Error al controlar el flash: ", err);
+                        alert("No se pudo controlar el flash de la cámara.");
+                        flashCheckbox.checked = false; // Desmarcar si falla
+                        flashCheckbox.disabled = true; // Deshabilita si no funciona
+                    }
+                } else {
+                    console.warn("La API de la cámara no soporta la activación del flash (torch).");
+                    alert("Tu dispositivo o navegador no soporta la activación del flash de la cámara.");
+                    flashCheckbox.checked = false; // Desmarcar si no soporta
+                    flashCheckbox.disabled = true; // Deshabilita el checkbox si no hay soporte
+                }
+            }
+        }
+
+        function capturar() {
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+                alert("El video no está listo para capturar. Por favor, espera o recarga la página.");
+                return;
+            }
+
+            // Desactivar el flash justo antes de capturar si estaba activo
+            if (flashCheckbox.checked && videoTrack && videoTrack.getCapabilities().torch) {
+                videoTrack.applyConstraints({
+                    advanced: [{ torch: false }]
+                }).catch(e => console.error("Error al apagar flash antes de capturar:", e));
+            }
+
+            canvas.width = LETTER_WIDTH_PX;
+            canvas.height = LETTER_HEIGHT_PX;
+
+            const canvasAspectRatio = canvas.width / canvas.height;
+            const videoAspectRatio = video.videoWidth / video.videoHeight;
+
+            let sx, sy, sWidth, sHeight;
+            let dx, dy, dWidth, dHeight;
+
+            if (videoAspectRatio > canvasAspectRatio) {
+                sHeight = video.videoHeight;
+                sWidth = sHeight * canvasAspectRatio;
+                sx = (video.videoWidth - sWidth) / 2;
+                sy = 0;
+            } else {
+                sWidth = video.videoWidth;
+                sHeight = sWidth / canvasAspectRatio;
+                sx = 0;
+                sy = (video.videoHeight - sHeight) / 2;
+            }
+
+            dx = 0;
+            dy = 0;
+            dWidth = canvas.width;
+            dHeight = canvas.height;
+
+            ctx.drawImage(video, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+
+            if (filtroCheckbox.checked) {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    let gray = 0.3 * r + 0.59 * g + 0.11 * b;
+                    gray = (gray - 128) * 1.5 + 128;
+                    gray += 20;
+                    gray = Math.max(0, Math.min(255, gray));
+
+                    const threshold = 140;
+                    const value = gray > threshold ? 255 : 0;
+                    data[i] = data[i + 1] = data[i + 2] = value;
+                }
+                ctx.putImageData(imageData, 0, 0);
+            }
+
+            const logoWidth = canvas.width * 0.15;
+            const logoHeight = mazdaLogo.naturalWidth > 0 ? (mazdaLogo.naturalHeight / mazdaLogo.naturalWidth) * logoWidth : 0;
+            const margin = 30;
+
+            if (mazdaLogo.complete && mazdaLogo.naturalWidth > 0) {
+                ctx.globalAlpha = 0.7;
+                ctx.drawImage(mazdaLogo, canvas.width - logoWidth - margin, canvas.height - logoHeight - margin, logoWidth, logoHeight);
+                ctx.globalAlpha = 1.0;
+            } else {
+                mazdaLogo.onload = () => {
+                    ctx.globalAlpha = 0.7;
+                    ctx.drawImage(mazdaLogo, canvas.width - logoWidth - margin, canvas.height - logoHeight - margin, logoWidth, logoHeight);
+                    ctx.globalAlpha = 1.0;
+                };
+            }
+
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            video.style.display = "none";
+            canvas.style.display = "block";
+            documentoEscaneado = true;
+        }
+
+        async function descargarPDF() {
+            if (!documentoEscaneado) {
+                alert("No se ha escaneado ningún documento.");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('portrait', 'mm', 'letter');
+            const imgData = canvas.toDataURL("image/jpeg", 1.0);
+
+            const pageWidthMM = pdf.internal.pageSize.getWidth();
+            const pageHeightMM = pdf.internal.pageSize.getHeight();
+
+            const imgWidthPx = canvas.width;
+            const imgHeightPx = canvas.height;
+            const imgRatio = imgHeightPx / imgWidthPx;
+
+            let pdfWidth = pageWidthMM;
+            let pdfHeight = pdfWidth * imgRatio;
+
+            if (pdfHeight > pageHeightMM) {
+                pdfHeight = pageHeightMM;
+                pdfWidth = pdfHeight / imgRatio;
+            }
+
+            const x = (pageWidthMM - pdfWidth) / 2;
+            const y = (pageHeightMM - pdfHeight) / 2;
+
+            pdf.addImage(imgData, "JPEG", x, y, pdfWidth, pdfHeight);
+            pdf.save("documento_escaneado.pdf");
+        }
+
+        function descargarImagen() {
+            if (!documentoEscaneado) {
+                alert("No se ha escaneado ningún documento.");
+                return;
+            }
+
+            const link = document.createElement("a");
+            link.download = "documento_escaneado.jpg";
+            link.href = canvas.toDataURL("image/jpeg", 1.0);
+            link.click();
+        }
+
+        function recargar() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            iniciarCamara();
+        }
+
+        // Lógica de la Pantalla de Carga
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                splashScreen.classList.add('hidden');
+                splashScreen.addEventListener('transitionend', () => {
+                    splashScreen.style.display = 'none';
+                    bodyElement.style.overflow = 'auto';
+                    mainContent.classList.add('visible');
+                    iniciarCamara();
+                }, { once: true });
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
